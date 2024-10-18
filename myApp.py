@@ -7,7 +7,7 @@ from typing import List, Union
 
 from faker import Faker
 
-from database import Base, engine, Employee, session
+from database import Base, engine, Employee, session, get_cursor
 
 fake = Faker()
 
@@ -133,7 +133,7 @@ def generate_fake_employees() -> None:
 
 
 @execution_time
-def fetch_data() -> None:
+def data_extraction() -> None:
     """
     Извлекает данные о сотрудниках из базы данных.
 
@@ -142,16 +142,36 @@ def fetch_data() -> None:
 
     :return: None
     """
-    data = session.query(Employee).filter(Employee.sex == 'Male', Employee.full_name.like('F%')).all()
-    print(len(data))
+    rows = session.query(Employee).filter(Employee.full_name.like('F%'), Employee.sex == 'Male').all()
+    print(f'Найдено: {len(rows)} сотрудников')
+
+
+@execution_time
+def optimized_data_extraction() -> None:
+    """
+    Выполняет оптимизированный запрос к базе данных для извлечения данных о сотрудниках.
+
+    Выполняет запрос к базе данных, извлекая сотрудников с полом 'Male' и именем, начинающимся с буквы 'F'.
+    Выводит количество найденных записей.
+
+    :return: None
+    """
+    query = """ 
+        SELECT * FROM employees
+        WHERE full_name LIKE 'F%' AND sex = 'Male' 
+        """
+    with get_cursor() as cur:
+        cur.execute(query)
+        rows = cur.fetchall()
+    print(f'Найдено: {len(rows)} сотрудников')
 
 command_dict = {
     '1': create_table,
     '2': add_employee,
     '3': get_unique_employees,
     '4': generate_fake_employees,
-    '5': fetch_data,
-    '6': fetch_data,
+    '5': data_extraction,
+    '6': optimized_data_extraction,
 }
 
 def main():
